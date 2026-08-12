@@ -62,3 +62,13 @@ Match the style of terms.html.
 3. In @templates/landing.html, update the "Privacy Policy"
 footer link href from "#" to "/privacy".
 4. Make sure the appearance looks like the website's theme
+
+###############################################################################################
+
+E) Landing Page Hero image
+
+I've attached a screenshot of the updated Spendly hero section design.
+Modify only the hero section in @templates/landing.html and @static/css/style.css
+to match this image exactly. Do not touch any other part of the page.
+
+
