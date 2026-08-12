@@ -1,4 +1,4 @@
-1. Add two links to the footer in @/expense-tracker/templates/base.html:
+1. Add two links to the footer in @templates/base.html:
 
 - "Terms and Conditions"
 - "Privacy Policy"
@@ -9,3 +9,5 @@ Point both to "#" as placeholder hrefs since the pages don't exist yet.
 Do not modify anything else on the page.
 
 #############################################################################################
+
+
