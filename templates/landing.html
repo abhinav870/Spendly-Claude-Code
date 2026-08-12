@@ -2,6 +2,69 @@
 
 {% block title %}Spendly — Track Every Rupee{% endblock %}
 
+{% block head %}
+<style>
+    .video-modal {
+        position: fixed;
+        inset: 0;
+        z-index: 1000;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        padding: 1rem;
+    }
+    .video-modal.is-open { display: flex; }
+
+    .video-modal-backdrop {
+        position: absolute;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.75);
+        cursor: pointer;
+    }
+
+    .video-modal-content {
+        position: relative;
+        width: 100%;
+        max-width: 900px;
+        z-index: 1;
+    }
+
+    .video-modal-frame {
+        position: relative;
+        padding-bottom: 56.25%;
+        height: 0;
+        background: #000;
+        border-radius: var(--radius-md);
+        overflow: hidden;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+    }
+
+    .video-modal-frame iframe {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        border: 0;
+    }
+
+    .video-modal-close {
+        position: absolute;
+        top: -2.5rem;
+        right: 0;
+        background: transparent;
+        border: none;
+        color: #fff;
+        font-size: 2rem;
+        line-height: 1;
+        cursor: pointer;
+        padding: 0.25rem 0.5rem;
+        opacity: 0.85;
+        transition: opacity 0.2s;
+    }
+    .video-modal-close:hover { opacity: 1; }
+</style>
+{% endblock %}
+
 {% block content %}
 
 <section class="hero">
@@ -96,4 +159,56 @@
     </div>
 </section>
 
+{% endblock %}
+
+{% block scripts %}
+<div class="video-modal" id="videoModal" aria-hidden="true" role="dialog" aria-modal="true" aria-label="How Spendly works">
+    <div class="video-modal-backdrop" data-close-modal></div>
+    <div class="video-modal-content">
+        <button type="button" class="video-modal-close" data-close-modal aria-label="Close video">&times;</button>
+        <div class="video-modal-frame">
+            <iframe
+                id="videoModalFrame"
+                src=""
+                data-src="https://www.youtube.com/embed/dQw4w9WgXcQ?autoplay=1&rel=0"
+                title="How Spendly works"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                allowfullscreen></iframe>
+        </div>
+    </div>
+</div>
+<script>
+    (function () {
+        var triggerSelector = 'a[href="#how-it-works"]';
+        var modal = document.getElementById('videoModal');
+        var frame = document.getElementById('videoModalFrame');
+        if (!modal || !frame) return;
+
+        var triggers = document.querySelectorAll(triggerSelector);
+        var videoSrc = frame.getAttribute('data-src') || '';
+
+        function openModal(e) {
+            if (e) e.preventDefault();
+            frame.setAttribute('src', videoSrc);
+            modal.classList.add('is-open');
+            modal.setAttribute('aria-hidden', 'false');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeModal() {
+            modal.classList.remove('is-open');
+            modal.setAttribute('aria-hidden', 'true');
+            frame.setAttribute('src', '');
+            document.body.style.overflow = '';
+        }
+
+        triggers.forEach(function (t) { t.addEventListener('click', openModal); });
+        modal.querySelectorAll('[data-close-modal]').forEach(function (el) {
+            el.addEventListener('click', closeModal);
+        });
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape' && modal.classList.contains('is-open')) closeModal();
+        });
+    })();
+</script>
 {% endblock %}
