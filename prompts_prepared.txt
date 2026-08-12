@@ -1,4 +1,8 @@
-1. Add two links to the footer in @templates/base.html:
+#############################################################################################
+
+A) Adding links to the footer
+
+Add two links to the footer in @templates/base.html:
 
 - "Terms and Conditions"
 - "Privacy Policy"
@@ -10,4 +14,51 @@ Do not modify anything else on the page.
 
 #############################################################################################
 
+B) Adding terms and conditions page
 
+Create a "Terms and Conditions" page for Spendly.
+
+1. Add a new route in [@app.py](http://app.py/):
+GET /terms → renders templates/terms.html
+2. Create templates/terms.html with generic terms and conditions
+content appropriate for a personal expense tracking app.
+Include sections like: Acceptance of Terms, Use of Service,
+User Data, Limitations of Liability, and Changes to Terms.
+Extend base.html if it exists, otherwise match the style of
+landing.html.
+3. In @templates/landing.html, update the "Terms and Conditions"
+footer link href from "#" to "/terms".
+
+
+#############################################################################################
+
+C) Adding route for terms and conditions page
+
+1. Add a new route in [@app.py](http://app.py/):
+GET /privacy → renders templates/privacy.html
+2. Create templates/privacy.html with generic privacy policy
+content appropriate for a personal expense tracking app.
+Include sections like: Data We Collect, How We Use Your Data,
+Data Storage, Third Party Services, and Contact Us.
+Match the style of terms.html.
+3. In @templates/landing.html, update the "Privacy Policy"
+footer link href from "#" to "/privacy".
+4. Make sure the appearance looks like the website's theme
+
+#############################################################################################
+
+D) Privacy policy page addition (Routes)
+
+Do the same as you did for the Terms and Conditions page,
+but for Privacy Policy.
+
+1. Add a new route in [@app.py](http://app.py/):
+GET /privacy → renders templates/privacy.html
+2. Create templates/privacy.html with generic privacy policy
+content appropriate for a personal expense tracking app.
+Include sections like: Data We Collect, How We Use Your Data,
+Data Storage, Third Party Services, and Contact Us.
+Match the style of terms.html.
+3. In @templates/landing.html, update the "Privacy Policy"
+footer link href from "#" to "/privacy".
+4. Make sure the appearance looks like the website's theme
