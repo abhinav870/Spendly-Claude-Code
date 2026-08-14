@@ -1,8 +1,19 @@
+import re
 import sqlite3
 from datetime import date, timedelta
 from pathlib import Path
 
-from werkzeug.security import generate_password_hash
+from werkzeug.security import check_password_hash, generate_password_hash
+
+
+# ------------------------------------------------------------------ #
+# Validation constants                                                #
+# ------------------------------------------------------------------ #
+
+# Lightweight email pattern — enough to catch the obvious malformed
+# addresses. The DB's UNIQUE constraint is the real duplicate check.
+EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+MIN_PASSWORD_LEN = 8
 
 
 # ------------------------------------------------------------------ #
@@ -27,6 +38,52 @@ def get_db():
     # FK enforcement is per-connection in SQLite; must be set every time.
     conn.execute("PRAGMA foreign_keys = ON")
     return conn
+
+
+# ------------------------------------------------------------------ #
+# User helpers                                                        #
+# ------------------------------------------------------------------ #
+
+def create_user(name, email, password):
+    """Insert a new user and return the new row id.
+
+    Raises sqlite3.IntegrityError if `email` already exists.
+    Caller is responsible for catching it and surfacing a user-facing error.
+    """
+    db = get_db()
+    cur = db.execute(
+        """
+        INSERT INTO users (name, email, password_hash)
+        VALUES (?, ?, ?)
+        """,
+        (name, email, generate_password_hash(password)),
+    )
+    db.commit()
+    return cur.lastrowid
+
+
+def get_user_by_email(email):
+    """Return the user row for `email`, or None if no match."""
+    return get_db().execute(
+        """
+        SELECT id, name, email, password_hash, created_at
+        FROM users
+        WHERE email = ?
+        """,
+        (email,),
+    ).fetchone()
+
+
+def get_user_by_id(user_id):
+    """Return the user row for `user_id`, or None if no match."""
+    return get_db().execute(
+        """
+        SELECT id, name, email, password_hash, created_at
+        FROM users
+        WHERE id = ?
+        """,
+        (user_id,),
+    ).fetchone()
 
 
 # ------------------------------------------------------------------ #
