@@ -8,3 +8,4 @@ __pycache__/
 .claude/plans/
 Theory/
 seed_user.py
+.pytest_cache/
