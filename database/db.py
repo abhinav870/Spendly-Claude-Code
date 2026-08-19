@@ -5,7 +5,6 @@ from pathlib import Path
 
 from werkzeug.security import check_password_hash, generate_password_hash
 
-
 # ------------------------------------------------------------------ #
 # Validation constants                                                #
 # ------------------------------------------------------------------ #
@@ -151,7 +150,6 @@ SAMPLE_EXPENSES = [
 # Day-of-month offsets to spread the 8 expenses across the current month.
 SAMPLE_DAYS = [1, 5, 8, 12, 15, 19, 22, 26]
 
-
 def _date_in_current_month(day):
     """Return YYYY-MM-DD for `day` in the current month, clamping to the
     last day if `day` exceeds the month's length (e.g. 31 in February)."""
@@ -163,7 +161,6 @@ def _date_in_current_month(day):
         next_month_first = (today.replace(day=28) + timedelta(days=1)).replace(day=1)
         last_day = (next_month_first - timedelta(days=1)).day
         return today.replace(day=last_day).isoformat()
-
 
 def seed_db():
     """Insert demo user + 8 sample expenses. Safe to call repeatedly."""
