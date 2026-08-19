@@ -31,13 +31,17 @@ DB_PATH = PROJECT_ROOT / "spendly.db"
 def get_db():
     """Open a SQLite connection with Row access and FK enforcement."""
 
-    conn = sqlite3.connect(DB_PATH)
+    conn = sqlite3.connect(
+        DB_PATH,
+        timeout=10,
+    )
     conn.row_factory = sqlite3.Row
 
     # FK enforcement is per-connection in SQLite; must be set every time.
     conn.execute("PRAGMA foreign_keys = ON")
-    return conn
+    conn.execute("PRAGMA busy_timeout = 10000")
 
+    return conn
 
 # ------------------------------------------------------------------ #
 # User helpers                                                        #
@@ -49,40 +53,41 @@ def create_user(name, email, password):
     Raises sqlite3.IntegrityError if `email` already exists.
     Caller is responsible for catching it and surfacing a user-facing error.
     """
-    db = get_db()
-    cur = db.execute(
-        """
-        INSERT INTO users (name, email, password_hash)
-        VALUES (?, ?, ?)
-        """,
-        (name, email, generate_password_hash(password)),
-    )
-    db.commit()
-    return cur.lastrowid
-
+    with get_db() as db:
+        cur = db.execute(
+            """
+            INSERT INTO users (name, email, password_hash)
+            VALUES (?, ?, ?)
+            """,
+            (name, email, generate_password_hash(password)),
+        )
+        return cur.lastrowid
 
 def get_user_by_email(email):
     """Return the user row for `email`, or None if no match."""
-    return get_db().execute(
-        """
-        SELECT id, name, email, password_hash, created_at
-        FROM users
-        WHERE email = ?
-        """,
-        (email,),
-    ).fetchone()
 
+    with get_db() as db:
+        return get_db().execute(
+            """
+            SELECT id, name, email, password_hash, created_at
+            FROM users
+            WHERE email = ?
+            """,
+            (email,),
+        ).fetchone()
 
 def get_user_by_id(user_id):
     """Return the user row for `user_id`, or None if no match."""
-    return get_db().execute(
-        """
-        SELECT id, name, email, password_hash, created_at
-        FROM users
-        WHERE id = ?
-        """,
-        (user_id,),
-    ).fetchone()
+
+    with get_db() as db:
+        return get_db().execute(
+            """
+            SELECT id, name, email, password_hash, created_at
+            FROM users
+            WHERE id = ?
+            """,
+            (user_id,),
+        ).fetchone()
 
 
 # ------------------------------------------------------------------ #
@@ -91,32 +96,33 @@ def get_user_by_id(user_id):
 
 def init_db():
     """Create all tables if they don't already exist."""
-    db = get_db()
-    db.execute(
-        """
-        CREATE TABLE IF NOT EXISTS users (
-            id            INTEGER PRIMARY KEY AUTOINCREMENT,
-            name          TEXT    NOT NULL,
-            email         TEXT    NOT NULL UNIQUE,
-            password_hash TEXT    NOT NULL,
-            created_at    TEXT    DEFAULT (datetime('now'))
+
+    with get_db() as db:
+        db.execute(
+            """
+            CREATE TABLE IF NOT EXISTS users (
+                id            INTEGER PRIMARY KEY AUTOINCREMENT,
+                name          TEXT    NOT NULL,
+                email         TEXT    NOT NULL UNIQUE,
+                password_hash TEXT    NOT NULL,
+                created_at    TEXT    DEFAULT (datetime('now'))
+            )
+            """
         )
-        """
-    )
-    db.execute(
-        """
-        CREATE TABLE IF NOT EXISTS expenses (
-            id          INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id     INTEGER NOT NULL REFERENCES users(id),
-            amount      REAL    NOT NULL,
-            category    TEXT    NOT NULL,
-            date        TEXT    NOT NULL,
-            description TEXT,
-            created_at  TEXT    DEFAULT (datetime('now'))
+        db.execute(
+            """
+            CREATE TABLE IF NOT EXISTS expenses (
+                id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id     INTEGER NOT NULL REFERENCES users(id),
+                amount      REAL    NOT NULL,
+                category    TEXT    NOT NULL,
+                date        TEXT    NOT NULL,
+                description TEXT,
+                created_at  TEXT    DEFAULT (datetime('now'))
+            )
+            """
         )
-        """
-    )
-    db.commit()
+    
 
 
 # ------------------------------------------------------------------ #
@@ -154,6 +160,7 @@ def _date_in_current_month(day):
     """Return YYYY-MM-DD for `day` in the current month, clamping to the
     last day if `day` exceeds the month's length (e.g. 31 in February)."""
     today = date.today()
+
     try:
         return today.replace(day=day).isoformat()
     except ValueError:
@@ -164,32 +171,30 @@ def _date_in_current_month(day):
 
 def seed_db():
     """Insert demo user + 8 sample expenses. Safe to call repeatedly."""
-    conn = get_db()
+    with get_db() as conn:
 
-    # Idempotency guard — don't duplicate data on subsequent runs.
-    row = conn.execute("SELECT COUNT(*) AS n FROM users").fetchone()
-    if row["n"] > 0:
-        return
+        # Idempotency guard — don't duplicate data on subsequent runs.
+        row = conn.execute("SELECT COUNT(*) AS n FROM users").fetchone()
+        if row["n"] > 0:
+            return
 
-    # 1. Demo user
-    conn.execute(
-        """
-        INSERT INTO users (name, email, password_hash)
-        VALUES (?, ?, ?)
-        """,
-        ("Demo User", "demo@spendly.com", generate_password_hash("demo123")),
-    )
-
-    user_id = conn.execute("SELECT id FROM users WHERE email = ?", ("demo@spendly.com",)).fetchone()["id"]
-
-    # 2. Sample expenses (linked to demo user)
-    for (category, description, amount), day in zip(SAMPLE_EXPENSES, SAMPLE_DAYS):
+        # 1. Demo user
         conn.execute(
             """
-            INSERT INTO expenses (user_id, amount, category, date, description)
-            VALUES (?, ?, ?, ?, ?)
+            INSERT INTO users (name, email, password_hash)
+            VALUES (?, ?, ?)
             """,
-            (user_id, amount, category, _date_in_current_month(day), description),
+            ("Demo User", "demo@spendly.com", generate_password_hash("demo123")),
         )
 
-    conn.commit()
+        user_id = conn.execute("SELECT id FROM users WHERE email = ?", ("demo@spendly.com",)).fetchone()["id"]
+
+        # 2. Sample expenses (linked to demo user)
+        for (category, description, amount), day in zip(SAMPLE_EXPENSES, SAMPLE_DAYS):
+            conn.execute(
+                """
+                INSERT INTO expenses (user_id, amount, category, date, description)
+                VALUES (?, ?, ?, ?, ?)
+                """,
+                (user_id, amount, category, _date_in_current_month(day), description),
+            )
