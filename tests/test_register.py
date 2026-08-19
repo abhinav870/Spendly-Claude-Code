@@ -60,6 +60,10 @@ def test_post_register_duplicate_email_shows_error(client):
         "/register",
         data={"name": "Bob", "email": "bob@x.com", "password": "longenough"},
     )
+    # First registration logs the user in; clear the session so the second
+    # POST is treated as an anonymous attempt to register a duplicate email.
+    with client.session_transaction() as sess:
+        sess.clear()
     resp = client.post(
         "/register",
         data={"name": "Bobby", "email": "bob@x.com", "password": "longenough"},

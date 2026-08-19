@@ -2,6 +2,8 @@ import os
 import sqlite3
 
 from flask import Flask, abort, redirect, render_template, request, session, url_for
+from werkzeug.security import check_password_hash
+
 from database.db import EMAIL_RE, MIN_PASSWORD_LEN, create_user, get_user_by_email, init_db, seed_db
 
 app = Flask(__name__)
@@ -20,6 +22,10 @@ def landing():
 
 @app.route("/register", methods=["GET", "POST"])
 def register():
+    # Already logged in? Don't show another registration form.
+    if session.get("user_id"):
+        return redirect(url_for("landing"))
+
     if request.method == "POST":
         name = (request.form.get("name") or "").strip()
         email = (request.form.get("email") or "").strip().lower()
@@ -57,8 +63,32 @@ def register():
 
     return render_template("register.html")
 
-@app.route("/login")
+@app.route("/login", methods=["GET", "POST"])
 def login():
+    # Already logged in? Skip the login form entirely.
+    if session.get("user_id"):
+        return redirect(url_for("landing"))
+
+    if request.method == "POST":
+        email = (request.form.get("email") or "").strip().lower()
+        password = request.form.get("password") or ""
+
+        # Use the same generic message for "no such user" and "wrong
+        # password" so we don't leak which email addresses exist.
+        user = get_user_by_email(email) if email else None
+
+        if user is None or not check_password_hash(user["password_hash"], password):
+            return (
+                render_template(
+                    "login.html",
+                    error="Invalid email or password.",
+                ),
+                400,
+            )
+
+        session["user_id"] = user["id"]
+        return redirect(url_for("landing"))
+
     return render_template("login.html")
 
 @app.route("/terms")
@@ -75,7 +105,9 @@ def privacy():
 
 @app.route("/logout")
 def logout():
-    return "Logout — coming in Step 3"
+    session.pop("user_id", None)
+    session.clear()
+    return redirect(url_for("landing"))
 
 @app.route("/profile")
 def profile():
