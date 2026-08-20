@@ -4,7 +4,7 @@ import sqlite3
 from flask import Flask, abort, redirect, render_template, request, session, url_for
 from werkzeug.security import check_password_hash
 
-from database.db import EMAIL_RE, MIN_PASSWORD_LEN, create_user, get_user_by_email, init_db, seed_db
+from database.db import EMAIL_RE, MIN_PASSWORD_LEN, create_user, get_user_by_email, get_user_by_id, init_db, seed_db
 
 app = Flask(__name__)
 
@@ -18,13 +18,16 @@ app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "dev-secret-change-me")
 
 @app.route("/")
 def landing():
+    # Already logged in? Send them to their profile instead of the marketing page.
+    if session.get("user_id"):
+        return redirect(url_for("profile"))
     return render_template("landing.html")
 
 @app.route("/register", methods=["GET", "POST"])
 def register():
     # Already logged in? Don't show another registration form.
     if session.get("user_id"):
-        return redirect(url_for("landing"))
+        return redirect(url_for("profile"))
 
     if request.method == "POST":
         name = (request.form.get("name") or "").strip()
@@ -59,7 +62,7 @@ def register():
             )
 
         session["user_id"] = user_id
-        return redirect(url_for("landing"))
+        return redirect(url_for("profile"))
 
     return render_template("register.html")
 
@@ -67,7 +70,7 @@ def register():
 def login():
     # Already logged in? Skip the login form entirely.
     if session.get("user_id"):
-        return redirect(url_for("landing"))
+        return redirect(url_for("profile"))
 
     if request.method == "POST":
         email = (request.form.get("email") or "").strip().lower()
@@ -87,7 +90,7 @@ def login():
             )
 
         session["user_id"] = user["id"]
-        return redirect(url_for("landing"))
+        return redirect(url_for("profile"))
 
     return render_template("login.html")
 
@@ -99,10 +102,6 @@ def terms():
 def privacy():
     return render_template("privacy.html")
 
-# ------------------------------------------------------------------ #
-# Placeholder routes — students will implement these                  #
-# ------------------------------------------------------------------ #
-
 @app.route("/logout")
 def logout():
     session.pop("user_id", None)
@@ -111,7 +110,38 @@ def logout():
 
 @app.route("/profile")
 def profile():
-    return "Profile page — coming in Step 4"
+    if not session.get("user_id"):
+        return redirect(url_for("login"))
+
+    user = get_user_by_id(session["user_id"])
+    if user is None:
+        abort(404)
+
+    # Hardcoded per spec — real expense data is wired up in a later step.
+    summary = {"total_spent": 18240, "transaction_count": 8, "top_category": "Bills"}
+    transactions = [
+        {"date": "2026-08-01", "description": "Groceries", "category": "Food", "amount": 455},
+        {"date": "2026-08-05", "description": "Metro pass", "category": "Transport", "amount": 300},
+        {"date": "2026-08-08", "description": "Electricity", "category": "Bills", "amount": 7520},
+        {"date": "2026-08-12", "description": "Pharmacy", "category": "Health", "amount": 2200},
+    ]
+    categories = [
+        {"name": "Bills", "amount": 7520, "pct": 41},
+        {"name": "Shopping", "amount": 3500, "pct": 19},
+        {"name": "Food", "amount": 3330, "pct": 18},
+        {"name": "Health", "amount": 2200, "pct": 12},
+    ]
+    return render_template(
+        "profile.html",
+        user=user,
+        summary=summary,
+        transactions=transactions,
+        categories=categories,
+    )
+
+# ------------------------------------------------------------------ #
+# Placeholder routes — students will implement these                  #
+# ------------------------------------------------------------------ #
 
 @app.route("/expenses/add")
 def add_expense():

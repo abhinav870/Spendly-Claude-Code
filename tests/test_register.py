@@ -25,7 +25,7 @@ def test_get_register_renders_form(client):
 # ------------------------------------------------------------------ #
 
 def test_post_register_creates_user_and_redirects(client):
-    """Valid POST inserts a user, sets session, redirects to /."""
+    """Valid POST inserts a user, sets session, redirects to /profile."""
     resp = client.post(
         "/register",
         data={
@@ -36,8 +36,8 @@ def test_post_register_creates_user_and_redirects(client):
         follow_redirects=False,
     )
     assert resp.status_code == 302
-    # url_for("landing") resolves to "/"
-    assert resp.headers["Location"].endswith("/")
+    # url_for("profile") resolves to "/profile"
+    assert resp.headers["Location"].endswith("/profile")
 
     # DB row exists with hashed password.
     user = get_user_by_email("alice@example.com")
