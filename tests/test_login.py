@@ -51,7 +51,7 @@ def test_get_login_uses_url_for_action(client):
 # ------------------------------------------------------------------ #
 
 def test_post_login_valid_credentials_sets_session_and_redirects(client):
-    """Valid email + matching password sets session and redirects to /."""
+    """Valid email + matching password sets session and redirects to /profile."""
     _seed_user(client, email="alice@example.com", password="supersecret")
 
     resp = client.post(
@@ -60,7 +60,7 @@ def test_post_login_valid_credentials_sets_session_and_redirects(client):
         follow_redirects=False,
     )
     assert resp.status_code == 302
-    assert resp.headers["Location"].endswith("/")
+    assert resp.headers["Location"].endswith("/profile")
 
     user = get_user_by_email("alice@example.com")
     with client.session_transaction() as sess:
@@ -227,7 +227,7 @@ def test_session_persists_across_requests(client):
     client.post("/login", data={"email": "alice@example.com", "password": "supersecret"})
 
     # A second request with the same client should still see the session.
-    resp = client.get("/")
+    resp = client.get("/profile")
     assert resp.status_code == 200
     with client.session_transaction() as sess:
         assert sess["user_id"] is not None
@@ -250,7 +250,7 @@ def test_navbar_shows_logout_when_logged_in(client):
     _seed_user(client, email="alice@example.com", password="supersecret")
     client.post("/login", data={"email": "alice@example.com", "password": "supersecret"})
 
-    body = client.get("/").get_data(as_text=True)
+    body = client.get("/profile").get_data(as_text=True)
     assert "Log out" in body
     # The signed-out nav items should be gone for logged-in users.
     assert ">Sign in<" not in body
@@ -262,17 +262,17 @@ def test_navbar_shows_logout_when_logged_in(client):
 # ------------------------------------------------------------------ #
 
 def test_get_login_redirects_when_already_logged_in(client):
-    """A logged-in user GETting /login is bounced to /."""
+    """A logged-in user GETting /login is bounced to /profile."""
     _seed_user(client, email="alice@example.com", password="supersecret")
     client.post("/login", data={"email": "alice@example.com", "password": "supersecret"})
 
     resp = client.get("/login", follow_redirects=False)
     assert resp.status_code == 302
-    assert resp.headers["Location"].endswith("/")
+    assert resp.headers["Location"].endswith("/profile")
 
 
 def test_post_login_redirects_when_already_logged_in(client):
-    """A logged-in user POSTing /login is bounced to / (don't re-auth)."""
+    """A logged-in user POSTing /login is bounced to /profile (don't re-auth)."""
     _seed_user(client, email="alice@example.com", password="supersecret")
     client.post("/login", data={"email": "alice@example.com", "password": "supersecret"})
 
@@ -282,21 +282,21 @@ def test_post_login_redirects_when_already_logged_in(client):
         follow_redirects=False,
     )
     assert resp.status_code == 302
-    assert resp.headers["Location"].endswith("/")
+    assert resp.headers["Location"].endswith("/profile")
 
 
 def test_get_register_redirects_when_already_logged_in(client):
-    """A logged-in user GETting /register is bounced to /."""
+    """A logged-in user GETting /register is bounced to /profile."""
     _seed_user(client, email="alice@example.com", password="supersecret")
     client.post("/login", data={"email": "alice@example.com", "password": "supersecret"})
 
     resp = client.get("/register", follow_redirects=False)
     assert resp.status_code == 302
-    assert resp.headers["Location"].endswith("/")
+    assert resp.headers["Location"].endswith("/profile")
 
 
 def test_post_register_redirects_when_already_logged_in(client):
-    """A logged-in user POSTing /register is bounced to / (no new user)."""
+    """A logged-in user POSTing /register is bounced to /profile (no new user)."""
     _seed_user(client, email="alice@example.com", password="supersecret")
     client.post("/login", data={"email": "alice@example.com", "password": "supersecret"})
 
@@ -306,7 +306,7 @@ def test_post_register_redirects_when_already_logged_in(client):
         follow_redirects=False,
     )
     assert resp.status_code == 302
-    assert resp.headers["Location"].endswith("/")
+    assert resp.headers["Location"].endswith("/profile")
 
     # Critical: the registration must NOT have created Eve.
     assert get_user_by_email("eve@example.com") is None
