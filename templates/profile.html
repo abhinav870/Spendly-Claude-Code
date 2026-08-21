@@ -12,20 +12,20 @@
             <div class="profile-info-details">
                 <h1 class="profile-name">{{ user.name }}</h1>
                 <p class="profile-email">{{ user.email }}</p>
-                <p class="profile-since">Member since {{ user.created_at }}</p>
+                <p class="profile-since">Member since {{ user.member_since }}</p>
             </div>
         </div>
 
         <div class="profile-stats">
             <div class="stat-tile">
                 <div class="stat-tile-label">Total spent</div>
-                <div class="stat-tile-value">₹{{ "{:,}".format(summary.total_spent) }}</div>
-                <div class="stat-tile-meta">this month</div>
+                <div class="stat-tile-value">₹{{ "{:,.2f}".format(summary.total_spent) }}</div>
+                <div class="stat-tile-meta">overall</div>
             </div>
             <div class="stat-tile">
                 <div class="stat-tile-label">Transactions</div>
                 <div class="stat-tile-value">{{ summary.transaction_count }}</div>
-                <div class="stat-tile-meta">this month</div>
+                <div class="stat-tile-meta">overall</div>
             </div>
             <div class="stat-tile">
                 <div class="stat-tile-label">Top category</div>
@@ -51,7 +51,7 @@
                         <td>{{ tx.date }}</td>
                         <td>{{ tx.description }}</td>
                         <td><span class="category-badge category-badge-{{ tx.category|lower }}">{{ tx.category }}</span></td>
-                        <td class="profile-table-amount">₹{{ "{:,}".format(tx.amount) }}</td>
+                        <td class="profile-table-amount">₹{{ "{:,.2f}".format(tx.amount) }}</td>
                     </tr>
                     {% endfor %}
                 </tbody>

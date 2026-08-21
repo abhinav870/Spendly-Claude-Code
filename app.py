@@ -5,6 +5,7 @@ from flask import Flask, abort, redirect, render_template, request, session, url
 from werkzeug.security import check_password_hash
 
 from database.db import EMAIL_RE, MIN_PASSWORD_LEN, create_user, get_user_by_email, get_user_by_id, init_db, seed_db
+from database import queries
 
 app = Flask(__name__)
 
@@ -113,24 +114,16 @@ def profile():
     if not session.get("user_id"):
         return redirect(url_for("login"))
 
-    user = get_user_by_id(session["user_id"])
-    if user is None:
+    user_id = session["user_id"]
+
+    if get_user_by_id(user_id) is None:
         abort(404)
 
-    # Hardcoded per spec — real expense data is wired up in a later step.
-    summary = {"total_spent": 18240, "transaction_count": 8, "top_category": "Bills"}
-    transactions = [
-        {"date": "2026-08-01", "description": "Groceries", "category": "Food", "amount": 455},
-        {"date": "2026-08-05", "description": "Metro pass", "category": "Transport", "amount": 300},
-        {"date": "2026-08-08", "description": "Electricity", "category": "Bills", "amount": 7520},
-        {"date": "2026-08-12", "description": "Pharmacy", "category": "Health", "amount": 2200},
-    ]
-    categories = [
-        {"name": "Bills", "amount": 7520, "pct": 41},
-        {"name": "Shopping", "amount": 3500, "pct": 19},
-        {"name": "Food", "amount": 3330, "pct": 18},
-        {"name": "Health", "amount": 2200, "pct": 12},
-    ]
+    user = queries.get_user_by_id(user_id)
+    summary = queries.get_summary_stats(user_id)
+    transactions = queries.get_recent_transactions(user_id)
+    categories = queries.get_category_breakdown(user_id)
+
     return render_template(
         "profile.html",
         user=user,
