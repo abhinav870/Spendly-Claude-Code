@@ -36,9 +36,27 @@ def test_get_profile_shows_user_details_when_logged_in(client):
 
 
 def test_get_profile_shows_transactions_and_categories(client):
-    """Page shows at least three hardcoded transaction rows and category rows."""
-    _seed_user(client, email="alice@example.com", password="supersecret")
+    """With real expenses in the DB, the page renders a transaction row per
+    expense and a category-breakdown row per distinct category."""
+    from database import db as db_module
+
+    user = _seed_user(client, email="alice@example.com", password="supersecret")
     client.post("/login", data={"email": "alice@example.com", "password": "supersecret"})
+
+    expenses = [
+        ("Food", "2026-08-01", "Groceries", 455),
+        ("Transport", "2026-08-05", "Metro pass", 300),
+        ("Bills", "2026-08-08", "Electricity", 7520),
+    ]
+    with db_module.get_db() as db:
+        for category, tx_date, description, amount in expenses:
+            db.execute(
+                """
+                INSERT INTO expenses (user_id, amount, category, date, description)
+                VALUES (?, ?, ?, ?, ?)
+                """,
+                (user["id"], amount, category, tx_date, description),
+            )
 
     body = client.get("/profile").get_data(as_text=True)
     assert body.count("category-badge") >= 3
