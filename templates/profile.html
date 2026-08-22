@@ -2,6 +2,10 @@
 
 {% block title %}Your profile — Spendly{% endblock %}
 
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/profile.css') }}">
+{% endblock %}
+
 {% block content %}
 
 <section class="profile-section">
@@ -16,25 +20,40 @@
             </div>
         </div>
 
-        <form class="profile-filters" method="get" action="{{ url_for('profile') }}">
-            <div class="profile-filter">
-                <label for="month">Month</label>
-                <select id="month" name="month" class="form-input" onchange="this.form.submit()">
-                    {% for option in month_options %}
-                    <option value="{{ option.value }}" {% if option.value == selected_month %}selected{% endif %}>{{ option.label }}</option>
-                    {% endfor %}
-                </select>
+        <div class="profile-date-filters">
+            <div class="preset-links">
+                <a href="{{ url_for('profile', category=selected_category or none) }}"
+                   class="preset-link {% if active_preset == 'all_time' %}preset-link-active{% endif %}">All Time</a>
+                <a href="{{ url_for('profile', category=selected_category or none, date_from=presets.this_month.date_from, date_to=presets.this_month.date_to) }}"
+                   class="preset-link {% if active_preset == 'this_month' %}preset-link-active{% endif %}">This Month</a>
+                <a href="{{ url_for('profile', category=selected_category or none, date_from=presets.last_3_months.date_from, date_to=presets.last_3_months.date_to) }}"
+                   class="preset-link {% if active_preset == 'last_3_months' %}preset-link-active{% endif %}">Last 3 Months</a>
+                <a href="{{ url_for('profile', category=selected_category or none, date_from=presets.last_6_months.date_from, date_to=presets.last_6_months.date_to) }}"
+                   class="preset-link {% if active_preset == 'last_6_months' %}preset-link-active{% endif %}">Last 6 Months</a>
             </div>
-            <div class="profile-filter">
-                <label for="category">Category</label>
-                <select id="category" name="category" class="form-input" onchange="this.form.submit()">
-                    <option value="" {% if selected_category == "" %}selected{% endif %}>All categories</option>
-                    {% for cat in category_options %}
-                    <option value="{{ cat }}" {% if cat == selected_category %}selected{% endif %}>{{ cat }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-        </form>
+
+            <form class="custom-range-form {% if active_preset is none and (selected_date_from or selected_date_to) %}custom-range-active{% endif %}" method="get" action="{{ url_for('profile') }}">
+                <div class="custom-range-field">
+                    <label for="date_from">From</label>
+                    <input type="date" id="date_from" name="date_from" class="form-input" value="{{ selected_date_from }}">
+                </div>
+                <div class="custom-range-field">
+                    <label for="date_to">To</label>
+                    <input type="date" id="date_to" name="date_to" class="form-input" value="{{ selected_date_to }}">
+                </div>
+                <div class="custom-range-field custom-range-category">
+                    <label for="category">Category</label>
+                    <select id="category" name="category" class="form-input">
+                        <option value="" {% if selected_category == "" %}selected{% endif %}>All categories</option>
+                        {% for cat in category_options %}
+                        <option value="{{ cat }}" {% if cat == selected_category %}selected{% endif %}>{{ cat }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <button type="submit" class="btn-submit custom-range-submit">Apply</button>
+                <a href="{{ url_for('profile') }}" class="btn-clear">Clear</a>
+            </form>
+        </div>
 
         <div class="profile-stats">
             <div class="stat-tile">
