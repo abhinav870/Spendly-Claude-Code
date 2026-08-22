@@ -1,4 +1,5 @@
 import calendar
+import math
 import os
 import sqlite3
 from datetime import date, datetime
@@ -205,13 +206,83 @@ def analytics():
 
     return render_template("analytics.html")
 
+@app.route("/expenses/add", methods=["GET", "POST"])
+def add_expense():
+    if not session.get("user_id"):
+        return redirect(url_for("login"))
+
+    user_id = session["user_id"]
+
+    if request.method == "POST":
+        amount_raw = (request.form.get("amount") or "").strip()
+        category = (request.form.get("category") or "").strip()
+        date_raw = (request.form.get("date") or "").strip()
+        description = (request.form.get("description") or "").strip() or None
+
+        form_values = {
+            "amount": amount_raw,
+            "category": category,
+            "date": date_raw,
+            "description": description or "",
+        }
+
+        # Validate cheapest first so the user sees the most relevant error.
+        try:
+            amount = float(amount_raw)
+            if not math.isfinite(amount):
+                amount = None
+        except ValueError:
+            amount = None
+
+        if amount is None or amount <= 0:
+            return (
+                render_template(
+                    "add_expense.html",
+                    error="Amount must be a positive number.",
+                    category_options=CATEGORIES,
+                    **form_values,
+                ),
+                400,
+            )
+
+        if category not in CATEGORIES:
+            return (
+                render_template(
+                    "add_expense.html",
+                    error="Please choose a valid category.",
+                    category_options=CATEGORIES,
+                    **form_values,
+                ),
+                400,
+            )
+
+        expense_date = _parse_iso_date(date_raw)
+        if expense_date is None:
+            return (
+                render_template(
+                    "add_expense.html",
+                    error="Please enter a valid date.",
+                    category_options=CATEGORIES,
+                    **form_values,
+                ),
+                400,
+            )
+
+        queries.create_expense(user_id, amount, category, expense_date.isoformat(), description)
+        return redirect(url_for("profile"))
+
+    return render_template(
+        "add_expense.html",
+        category_options=CATEGORIES,
+        amount="",
+        category="",
+        date=date.today().isoformat(),
+        description="",
+    )
+
 # ------------------------------------------------------------------ #
 # Placeholder routes — students will implement these                  #
 # ------------------------------------------------------------------ #
-
-@app.route("/expenses/add")
-def add_expense():
-    return "Add expense — coming in Step 7"
 
 @app.route("/expenses/<int:id>/edit")
 def edit_expense(id):

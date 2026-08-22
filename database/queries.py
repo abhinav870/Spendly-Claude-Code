@@ -133,3 +133,16 @@ def get_category_breakdown(user_id, category=None, date_from=None, date_to=None)
     breakdown[0]["pct"] += remainder
 
     return breakdown
+
+
+def create_expense(user_id, amount, category, expense_date, description=None):
+    """Insert a new expense and return the new row id."""
+    with get_db() as conn:
+        cur = conn.execute(
+            """
+            INSERT INTO expenses (user_id, amount, category, date, description)
+            VALUES (?, ?, ?, ?, ?)
+            """,
+            (user_id, amount, category, expense_date, description),
+        )
+        return cur.lastrowid
