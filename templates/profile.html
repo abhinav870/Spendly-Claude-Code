@@ -20,6 +20,24 @@
             </div>
         </div>
 
+        <div class="profile-actions">
+            <a href="{{ url_for('add_expense') }}" class="action-card action-card-primary">
+                <span class="action-card-icon">+</span>
+                <span class="action-card-title">Add Expense</span>
+                <span class="action-card-desc">Log a new transaction</span>
+            </a>
+            <div class="action-card action-card-disabled" aria-disabled="true">
+                <span class="action-card-icon">✎</span>
+                <span class="action-card-title">Edit Expense</span>
+                <span class="action-card-desc">Coming soon</span>
+            </div>
+            <div class="action-card action-card-disabled" aria-disabled="true">
+                <span class="action-card-icon">🗑</span>
+                <span class="action-card-title">Delete Expense</span>
+                <span class="action-card-desc">Coming soon</span>
+            </div>
+        </div>
+
         <div class="profile-date-filters">
             <div class="preset-links">
                 <a href="{{ url_for('profile', category=selected_category or none) }}"
@@ -89,7 +107,7 @@
                         {% for tx in transactions %}
                         <tr>
                             <td>{{ tx.date }}</td>
-                            <td>{{ tx.description }}</td>
+                            <td>{{ tx.description or "" }}</td>
                             <td><span class="category-badge category-badge-{{ tx.category|lower }}">{{ tx.category }}</span></td>
                             <td class="profile-table-amount">₹{{ "{:,.2f}".format(tx.amount) }}</td>
                         </tr>
