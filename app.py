@@ -4,7 +4,7 @@ import sqlite3
 from flask import Flask, abort, redirect, render_template, request, session, url_for
 from werkzeug.security import check_password_hash
 
-from database.db import EMAIL_RE, MIN_PASSWORD_LEN, create_user, get_user_by_email, get_user_by_id, init_db, seed_db
+from database.db import CATEGORIES, EMAIL_RE, MIN_PASSWORD_LEN, create_user, get_user_by_email, get_user_by_id, init_db, seed_db
 from database import queries
 
 app = Flask(__name__)
@@ -119,10 +119,14 @@ def profile():
     if get_user_by_id(user_id) is None:
         abort(404)
 
+    selected_month = request.args.get("month") or None
+    selected_category = request.args.get("category") or None
+
     user = queries.get_user_by_id(user_id)
-    summary = queries.get_summary_stats(user_id)
-    transactions = queries.get_recent_transactions(user_id)
-    categories = queries.get_category_breakdown(user_id)
+    summary = queries.get_summary_stats(user_id, month=selected_month, category=selected_category)
+    transactions = queries.get_recent_transactions(user_id, month=selected_month, category=selected_category)
+    categories = queries.get_category_breakdown(user_id, month=selected_month, category=selected_category)
+    month_options = queries.get_month_options()
 
     return render_template(
         "profile.html",
@@ -130,6 +134,10 @@ def profile():
         summary=summary,
         transactions=transactions,
         categories=categories,
+        month_options=month_options,
+        category_options=CATEGORIES,
+        selected_month=selected_month or "",
+        selected_category=selected_category or "",
     )
 
 # ------------------------------------------------------------------ #

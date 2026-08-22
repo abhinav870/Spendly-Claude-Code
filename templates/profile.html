@@ -16,6 +16,26 @@
             </div>
         </div>
 
+        <form class="profile-filters" method="get" action="{{ url_for('profile') }}">
+            <div class="profile-filter">
+                <label for="month">Month</label>
+                <select id="month" name="month" class="form-input" onchange="this.form.submit()">
+                    {% for option in month_options %}
+                    <option value="{{ option.value }}" {% if option.value == selected_month %}selected{% endif %}>{{ option.label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="profile-filter">
+                <label for="category">Category</label>
+                <select id="category" name="category" class="form-input" onchange="this.form.submit()">
+                    <option value="" {% if selected_category == "" %}selected{% endif %}>All categories</option>
+                    {% for cat in category_options %}
+                    <option value="{{ cat }}" {% if cat == selected_category %}selected{% endif %}>{{ cat }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </form>
+
         <div class="profile-stats">
             <div class="stat-tile">
                 <div class="stat-tile-label">Total spent</div>
@@ -34,42 +54,44 @@
             </div>
         </div>
 
-        <div class="profile-panel">
-            <h2 class="profile-panel-title">Recent transactions</h2>
-            <table class="profile-table">
-                <thead>
-                    <tr>
-                        <th>Date</th>
-                        <th>Description</th>
-                        <th>Category</th>
-                        <th class="profile-table-amount">Amount</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for tx in transactions %}
-                    <tr>
-                        <td>{{ tx.date }}</td>
-                        <td>{{ tx.description }}</td>
-                        <td><span class="category-badge category-badge-{{ tx.category|lower }}">{{ tx.category }}</span></td>
-                        <td class="profile-table-amount">₹{{ "{:,.2f}".format(tx.amount) }}</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
+        <div class="profile-panels-row">
+            <div class="profile-panel profile-panel-transactions">
+                <h2 class="profile-panel-title">Recent transactions</h2>
+                <table class="profile-table">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Description</th>
+                            <th>Category</th>
+                            <th class="profile-table-amount">Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for tx in transactions %}
+                        <tr>
+                            <td>{{ tx.date }}</td>
+                            <td>{{ tx.description }}</td>
+                            <td><span class="category-badge category-badge-{{ tx.category|lower }}">{{ tx.category }}</span></td>
+                            <td class="profile-table-amount">₹{{ "{:,.2f}".format(tx.amount) }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
 
-        <div class="profile-panel">
-            <h2 class="profile-panel-title">Category breakdown</h2>
-            <div class="stat-bars profile-breakdown">
-                {% for cat in categories %}
-                <div class="stat-bar-row">
-                    <span class="stat-bar-cat">{{ cat.name }}</span>
-                    <div class="stat-bar-track">
-                        <div class="stat-bar category-bar-{{ cat.name|lower }}" style="width: {{ cat.pct }}%"></div>
+            <div class="profile-panel profile-panel-breakdown">
+                <h2 class="profile-panel-title">Category breakdown</h2>
+                <div class="stat-bars profile-breakdown">
+                    {% for cat in categories %}
+                    <div class="stat-bar-row">
+                        <span class="stat-bar-cat">{{ cat.name }}</span>
+                        <div class="stat-bar-track">
+                            <div class="stat-bar category-bar-{{ cat.name|lower }}" style="width: {{ cat.pct }}%"></div>
+                        </div>
+                        <span class="stat-bar-pct">{{ cat.pct }}%</span>
                     </div>
-                    <span class="stat-bar-pct">{{ cat.pct }}%</span>
+                    {% endfor %}
                 </div>
-                {% endfor %}
             </div>
         </div>
 
