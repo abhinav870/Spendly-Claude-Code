@@ -193,6 +193,18 @@ def profile():
         presets=presets,
     )
 
+@app.route("/analytics")
+def analytics():
+    if not session.get("user_id"):
+        return redirect(url_for("login"))
+
+    user_id = session["user_id"]
+
+    if get_user_by_id(user_id) is None:
+        abort(404)
+
+    return render_template("analytics.html")
+
 # ------------------------------------------------------------------ #
 # Placeholder routes — students will implement these                  #
 # ------------------------------------------------------------------ #
