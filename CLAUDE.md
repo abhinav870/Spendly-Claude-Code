@@ -51,6 +51,10 @@ expense-tracker/
  - When asked to plan, delegate codebase research to a subagent before presenting the plan
    always use a builtin plan subagent in plan mode
 
+### Creating new subagents
+ - Whenever creating a new subagent (`.claude/agents/*.md`), always ask the user for these details before writing the file — do not assume defaults: tools, model, memory access, description, system prompt content, and color
+ - Only write the agent file once these are answered, or the user explicitly says to use defaults
+
 ## Commands
 
 # Setup
