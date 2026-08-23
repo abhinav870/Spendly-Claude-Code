@@ -7,7 +7,7 @@
           {
             "type": "command",
             "shell": "powershell",
-            "command": "$input = [Console]::In.ReadToEnd() | ConvertFrom-Json; $command = $input.tool_input.command; if ($command -match 'rm.*spendly\\.db') { Write-Output '{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":\"BLOCKED: You cannot delete the database file!\"}}' }"
+            "command": "$data = [Console]::In.ReadToEnd() | ConvertFrom-Json; $command = $data.tool_input.command; if ($command -match 'rm.*spendly\\.db') { Write-Output '{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":\"BLOCKED: You cannot delete the database file!\"}}' }"
           }
         ]
       }
