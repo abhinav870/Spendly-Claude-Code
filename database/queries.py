@@ -66,7 +66,9 @@ def get_summary_stats(user_id, category=None, date_from=None, date_to=None):
     }
 
 
-def get_recent_transactions(user_id, limit=None, category=None, date_from=None, date_to=None):
+def get_recent_transactions(
+    user_id, limit=None, category=None, date_from=None, date_to=None
+):
     """Return up to `limit` most recent expenses, newest-first, optionally
     restricted to a category and/or a date range (inclusive). `limit=None`
     returns every matching expense."""
@@ -74,7 +76,7 @@ def get_recent_transactions(user_id, limit=None, category=None, date_from=None, 
     with get_db() as conn:
         rows = conn.execute(
             """
-            SELECT date, description, category, amount
+            SELECT id, date, description, category, amount
             FROM expenses
             WHERE user_id = ?
               AND (? IS NULL OR category = ?)
@@ -83,11 +85,21 @@ def get_recent_transactions(user_id, limit=None, category=None, date_from=None, 
             ORDER BY date DESC, id DESC
             LIMIT ?
             """,
-            (user_id, category, category, date_from, date_from, date_to, date_to, sql_limit),
+            (
+                user_id,
+                category,
+                category,
+                date_from,
+                date_from,
+                date_to,
+                date_to,
+                sql_limit,
+            ),
         ).fetchall()
 
     return [
         {
+            "id": row["id"],
             "date": row["date"],
             "description": row["description"],
             "category": row["category"],
@@ -146,3 +158,43 @@ def create_expense(user_id, amount, category, expense_date, description=None):
             (user_id, amount, category, expense_date, description),
         )
         return cur.lastrowid
+
+
+def get_expense_by_id(expense_id, user_id):
+    """Return a template-shaped dict for a single expense owned by user_id, or None."""
+    with get_db() as conn:
+        row = conn.execute(
+            """
+            SELECT id, amount, category, date, description
+            FROM expenses
+            WHERE id = ? AND user_id = ?
+            """,
+            (expense_id, user_id),
+        ).fetchone()
+
+    if row is None:
+        return None
+
+    return {
+        "id": row["id"],
+        "amount": row["amount"],
+        "category": row["category"],
+        "date": row["date"],
+        "description": row["description"],
+    }
+
+
+def update_expense(
+    expense_id, user_id, amount, category, expense_date, description=None
+):
+    """Update an expense owned by user_id. Ownership is enforced in the WHERE clause."""
+    with get_db() as conn:
+        cur = conn.execute(
+            """
+            UPDATE expenses
+            SET amount = ?, category = ?, date = ?, description = ?
+            WHERE id = ? AND user_id = ?
+            """,
+            (amount, category, expense_date, description, expense_id, user_id),
+        )
+        return cur.rowcount > 0
