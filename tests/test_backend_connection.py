@@ -9,10 +9,10 @@ import database.db as db_module  # noqa: E402
 from database import queries  # noqa: E402
 from database.db import get_user_by_email  # noqa: E402
 
-
 # ------------------------------------------------------------------ #
 # Helpers                                                             #
 # ------------------------------------------------------------------ #
+
 
 def _seed_user(client, name="Alice", email="alice@example.com", password="supersecret"):
     """Insert a user row via /register and return the DB row."""
@@ -41,6 +41,7 @@ def _insert_expense(user_id, category, tx_date, description, amount):
 # Unit tests — get_user_by_id                                        #
 # ------------------------------------------------------------------ #
 
+
 def test_get_user_by_id_returns_correct_shape(client):
     user = _seed_user(client, name="Alice", email="alice@example.com")
     result = queries.get_user_by_id(user["id"])
@@ -58,6 +59,7 @@ def test_get_user_by_id_nonexistent_returns_none(client):
 # ------------------------------------------------------------------ #
 # Unit tests — get_summary_stats                                     #
 # ------------------------------------------------------------------ #
+
 
 def test_get_summary_stats_with_expenses(client):
     user = _seed_user(client)
@@ -81,6 +83,7 @@ def test_get_summary_stats_no_expenses(client):
 # Unit tests — get_recent_transactions                                #
 # ------------------------------------------------------------------ #
 
+
 def test_get_recent_transactions_newest_first(client):
     user = _seed_user(client)
     _insert_expense(user["id"], "Food", "2026-08-01", "Oldest", 10)
@@ -93,7 +96,7 @@ def test_get_recent_transactions_newest_first(client):
     assert txs[0]["description"] == "Newest"
 
     for tx in txs:
-        assert set(tx.keys()) == {"date", "description", "category", "amount"}
+        assert set(tx.keys()) == {"id", "date", "description", "category", "amount"}
 
 
 def test_get_recent_transactions_empty_list(client):
@@ -104,6 +107,7 @@ def test_get_recent_transactions_empty_list(client):
 # ------------------------------------------------------------------ #
 # Unit tests — get_category_breakdown                                #
 # ------------------------------------------------------------------ #
+
 
 def test_get_category_breakdown_pct_sums_to_100_and_ordered(client):
     user = _seed_user(client)
@@ -130,6 +134,7 @@ def test_get_category_breakdown_empty_list(client):
 # Route tests                                                         #
 # ------------------------------------------------------------------ #
 
+
 def test_get_profile_unauthenticated_redirects_to_login(client):
     resp = client.get("/profile", follow_redirects=False)
     assert resp.status_code == 302
@@ -145,6 +150,7 @@ def test_get_profile_seeded_demo_user_shows_real_data(monkeypatch, tmp_path):
     db_module.seed_db()
 
     from app import app as flask_app
+
     flask_app.config.update(SECRET_KEY="test-secret-key", TESTING=True)
     flask_client = flask_app.test_client()
 
@@ -188,6 +194,7 @@ def test_get_profile_transactions_render_newest_first(monkeypatch, tmp_path):
     db_module.seed_db()
 
     from app import app as flask_app
+
     flask_app.config.update(SECRET_KEY="test-secret-key", TESTING=True)
     flask_client = flask_app.test_client()
 
@@ -224,11 +231,16 @@ def test_get_profile_new_user_zero_state(client):
 # Two-user isolation — the critical requirement                       #
 # ------------------------------------------------------------------ #
 
+
 def test_profile_isolates_expenses_between_users(client):
     """A user must only ever see their own expenses — never another
     user's transactions, categories, or totals."""
-    user_a = _seed_user(client, name="Alice", email="alice@example.com", password="supersecret")
-    user_b = _seed_user(client, name="Bob", email="bob@example.com", password="supersecret")
+    user_a = _seed_user(
+        client, name="Alice", email="alice@example.com", password="supersecret"
+    )
+    user_b = _seed_user(
+        client, name="Bob", email="bob@example.com", password="supersecret"
+    )
 
     _insert_expense(user_a["id"], "Food", "2026-08-01", "Alice Groceries", 111)
     _insert_expense(user_a["id"], "Bills", "2026-08-02", "Alice Electricity", 222)
@@ -237,7 +249,9 @@ def test_profile_isolates_expenses_between_users(client):
     _insert_expense(user_b["id"], "Entertainment", "2026-08-02", "Bob Movie", 444)
 
     # Log in as Alice and confirm Bob's data never appears.
-    client.post("/login", data={"email": "alice@example.com", "password": "supersecret"})
+    client.post(
+        "/login", data={"email": "alice@example.com", "password": "supersecret"}
+    )
     body_a = client.get("/profile").get_data(as_text=True)
 
     assert "Alice Groceries" in body_a
@@ -270,8 +284,12 @@ def test_profile_isolates_expenses_between_users(client):
 def test_query_helpers_isolate_by_user_id(client):
     """Direct check on the query layer: querying user A never returns
     user B's rows, at the function level (not just via the route)."""
-    user_a = _seed_user(client, name="Alice", email="alice@example.com", password="supersecret")
-    user_b = _seed_user(client, name="Bob", email="bob@example.com", password="supersecret")
+    user_a = _seed_user(
+        client, name="Alice", email="alice@example.com", password="supersecret"
+    )
+    user_b = _seed_user(
+        client, name="Bob", email="bob@example.com", password="supersecret"
+    )
 
     _insert_expense(user_a["id"], "Food", "2026-08-01", "Alice item", 50)
     _insert_expense(user_b["id"], "Food", "2026-08-01", "Bob item", 9999)
