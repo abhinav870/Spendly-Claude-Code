@@ -74,7 +74,7 @@ def _seed_user_direct(name="Alice", email="alice@example.com"):
 def _fetch_expenses_for_user(user_id):
     with db_module.get_db() as db:
         return db.execute(
-            "SELECT * FROM expenses WHERE user_id = ?",
+            "SELECT * FROM expenses WHERE user_id = %s",
             (user_id,),
         ).fetchall()
 

@@ -36,10 +36,10 @@ if str(PROJECT_ROOT) not in sys.path:
 import database.db as db_module  # noqa: E402
 from database.db import CATEGORIES, get_user_by_email  # noqa: E402
 
-
 # ------------------------------------------------------------------ #
 # Helpers                                                             #
 # ------------------------------------------------------------------ #
+
 
 def _seed_user(client, name="Alice", email="alice@example.com", password="supersecret"):
     """Insert a user row via /register and return the DB row."""
@@ -57,7 +57,9 @@ def _login(client, email, password):
     return client.post("/login", data={"email": email, "password": password})
 
 
-def _register_and_login(client, name="Alice", email="alice@example.com", password="supersecret"):
+def _register_and_login(
+    client, name="Alice", email="alice@example.com", password="supersecret"
+):
     user = _seed_user(client, name=name, email=email, password=password)
     _login(client, email, password)
     return user
@@ -77,7 +79,7 @@ def _valid_payload(**overrides):
 def _fetch_expenses_for_user(user_id):
     with db_module.get_db() as db:
         return db.execute(
-            "SELECT * FROM expenses WHERE user_id = ?",
+            "SELECT * FROM expenses WHERE user_id = %s",
             (user_id,),
         ).fetchall()
 
@@ -85,6 +87,7 @@ def _fetch_expenses_for_user(user_id):
 # ------------------------------------------------------------------ #
 # Auth guard                                                          #
 # ------------------------------------------------------------------ #
+
 
 def test_get_add_expense_redirects_when_logged_out(client):
     """Anonymous GET /expenses/add is redirected to /login."""
@@ -107,6 +110,7 @@ def test_post_add_expense_redirects_when_logged_out(client):
 # ------------------------------------------------------------------ #
 # GET /expenses/add — form rendering                                  #
 # ------------------------------------------------------------------ #
+
 
 def test_get_add_expense_renders_form_when_logged_in(client):
     """Logged-in GET returns 200 and shows amount/category/date/description fields."""
@@ -151,6 +155,7 @@ def test_get_add_expense_uses_url_for_action_no_raw_jinja(client):
 # POST /expenses/add — happy path                                     #
 # ------------------------------------------------------------------ #
 
+
 def test_post_add_expense_valid_data_inserts_row_and_redirects(client):
     """Valid submission inserts a row for the current user and redirects to /profile."""
     user = _register_and_login(client)
@@ -182,7 +187,10 @@ def test_post_add_expense_description_is_optional(client):
 
     rows = _fetch_expenses_for_user(user["id"])
     assert len(rows) == 1
-    assert rows[0]["description"] in (None, ""), "Description should be nullable when omitted"
+    assert rows[0]["description"] in (
+        None,
+        "",
+    ), "Description should be nullable when omitted"
 
 
 def test_post_add_expense_empty_description_string_succeeds(client):
@@ -224,7 +232,9 @@ def test_post_add_expense_only_affects_current_user(client):
 
     # Log out and register/login a second user.
     client.get("/logout")
-    user_b = _register_and_login(client, name="Bob", email="bob@example.com", password="supersecret")
+    user_b = _register_and_login(
+        client, name="Bob", email="bob@example.com", password="supersecret"
+    )
 
     assert len(_fetch_expenses_for_user(user_a["id"])) == 1
     assert len(_fetch_expenses_for_user(user_b["id"])) == 0
@@ -236,6 +246,7 @@ def test_post_add_expense_only_affects_current_user(client):
 # ------------------------------------------------------------------ #
 # POST /expenses/add — amount validation                              #
 # ------------------------------------------------------------------ #
+
 
 @pytest.mark.parametrize("bad_amount", ["-50", "-0.01", "0", "0.00"])
 def test_post_add_expense_non_positive_amount_rejected(client, bad_amount):
@@ -282,7 +293,9 @@ def test_post_add_expense_negative_amount_preserves_submitted_values(client):
 
     resp = client.post(
         "/expenses/add",
-        data=_valid_payload(amount="-99", category="Health", description="Failed submission marker"),
+        data=_valid_payload(
+            amount="-99", category="Health", description="Failed submission marker"
+        ),
     )
     assert resp.status_code == 400
     body = resp.get_data(as_text=True)
@@ -293,6 +306,7 @@ def test_post_add_expense_negative_amount_preserves_submitted_values(client):
 # ------------------------------------------------------------------ #
 # POST /expenses/add — category validation                            #
 # ------------------------------------------------------------------ #
+
 
 @pytest.mark.parametrize("bad_category", ["Vacation", "food", "", "Not-A-Category"])
 def test_post_add_expense_invalid_category_rejected(client, bad_category):
@@ -324,7 +338,9 @@ def test_post_add_expense_accepts_every_fixed_category(client, category):
     """Every value in CATEGORIES must be an accepted, successful submission."""
     user = _register_and_login(client, email=f"user-{category.lower()}@example.com")
 
-    resp = client.post("/expenses/add", data=_valid_payload(category=category), follow_redirects=False)
+    resp = client.post(
+        "/expenses/add", data=_valid_payload(category=category), follow_redirects=False
+    )
     assert resp.status_code == 302
 
     rows = _fetch_expenses_for_user(user["id"])
@@ -335,6 +351,7 @@ def test_post_add_expense_accepts_every_fixed_category(client, category):
 # ------------------------------------------------------------------ #
 # POST /expenses/add — date validation                                #
 # ------------------------------------------------------------------ #
+
 
 @pytest.mark.parametrize(
     "bad_date",
@@ -377,7 +394,9 @@ def test_post_add_expense_valid_date_formats_accepted(client):
     """Sanity check: a normal valid YYYY-MM-DD date is accepted (contrast to malformed cases)."""
     user = _register_and_login(client)
 
-    resp = client.post("/expenses/add", data=_valid_payload(date="2026-02-14"), follow_redirects=False)
+    resp = client.post(
+        "/expenses/add", data=_valid_payload(date="2026-02-14"), follow_redirects=False
+    )
     assert resp.status_code == 302
 
     rows = _fetch_expenses_for_user(user["id"])
@@ -388,6 +407,7 @@ def test_post_add_expense_valid_date_formats_accepted(client):
 # ------------------------------------------------------------------ #
 # No crash / no traceback leak on invalid input                       #
 # ------------------------------------------------------------------ #
+
 
 def test_post_add_expense_invalid_input_does_not_leak_traceback(client):
     """Safety net: bad input must never surface a raw 500 / traceback text."""

@@ -26,7 +26,9 @@ def test_get_profile_redirects_when_logged_out(client):
 def test_get_profile_shows_user_details_when_logged_in(client):
     """Logged-in users see their name and email on a 200 response."""
     _seed_user(client, name="Alice", email="alice@example.com", password="supersecret")
-    client.post("/login", data={"email": "alice@example.com", "password": "supersecret"})
+    client.post(
+        "/login", data={"email": "alice@example.com", "password": "supersecret"}
+    )
 
     resp = client.get("/profile")
     assert resp.status_code == 200
@@ -41,7 +43,9 @@ def test_get_profile_shows_transactions_and_categories(client):
     from database import db as db_module
 
     user = _seed_user(client, email="alice@example.com", password="supersecret")
-    client.post("/login", data={"email": "alice@example.com", "password": "supersecret"})
+    client.post(
+        "/login", data={"email": "alice@example.com", "password": "supersecret"}
+    )
 
     expenses = [
         ("Food", "2026-08-01", "Groceries", 455),
@@ -53,7 +57,7 @@ def test_get_profile_shows_transactions_and_categories(client):
             db.execute(
                 """
                 INSERT INTO expenses (user_id, amount, category, date, description)
-                VALUES (?, ?, ?, ?, ?)
+                VALUES (%s, %s, %s, %s, %s)
                 """,
                 (user["id"], amount, category, tx_date, description),
             )
@@ -66,7 +70,9 @@ def test_get_profile_shows_transactions_and_categories(client):
 def test_get_profile_never_leaks_password_hash(client):
     """The rendered page must never contain the stored password hash."""
     user = _seed_user(client, email="alice@example.com", password="supersecret")
-    client.post("/login", data={"email": "alice@example.com", "password": "supersecret"})
+    client.post(
+        "/login", data={"email": "alice@example.com", "password": "supersecret"}
+    )
 
     body = client.get("/profile").get_data(as_text=True)
     assert user["password_hash"] not in body
@@ -78,7 +84,9 @@ def test_get_profile_never_leaks_password_hash(client):
 def test_get_profile_uses_url_for_links_no_raw_jinja(client):
     """Links must be resolved via url_for, not leaked as raw Jinja syntax."""
     _seed_user(client, email="alice@example.com", password="supersecret")
-    client.post("/login", data={"email": "alice@example.com", "password": "supersecret"})
+    client.post(
+        "/login", data={"email": "alice@example.com", "password": "supersecret"}
+    )
 
     body = client.get("/profile").get_data(as_text=True)
     assert 'href="{{ url_for(' not in body
@@ -89,13 +97,15 @@ def test_get_profile_404s_if_user_row_missing(client):
     from database import db as db_module
 
     _seed_user(client, email="alice@example.com", password="supersecret")
-    client.post("/login", data={"email": "alice@example.com", "password": "supersecret"})
+    client.post(
+        "/login", data={"email": "alice@example.com", "password": "supersecret"}
+    )
 
     with client.session_transaction() as sess:
         user_id = sess["user_id"]
 
     with db_module.get_db() as db:
-        db.execute("DELETE FROM users WHERE id = ?", (user_id,))
+        db.execute("DELETE FROM users WHERE id = %s", (user_id,))
 
     resp = client.get("/profile")
     assert resp.status_code == 404
@@ -103,6 +113,8 @@ def test_get_profile_404s_if_user_row_missing(client):
 
 def test_profile_template_has_no_hardcoded_hex_colors():
     """Spec requires CSS variables only — no hex colour values in profile.html."""
-    template_path = Path(__file__).resolve().parent.parent / "templates" / "profile.html"
+    template_path = (
+        Path(__file__).resolve().parent.parent / "templates" / "profile.html"
+    )
     content = template_path.read_text(encoding="utf-8")
     assert not re.search(r"#[0-9a-fA-F]{3,8}\b", content)

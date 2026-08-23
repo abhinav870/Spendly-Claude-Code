@@ -14,13 +14,17 @@ from app import app as flask_app  # noqa: E402
 
 
 @pytest.fixture(autouse=True)
-def _isolate_db(tmp_path, monkeypatch):
-    """Each test gets a fresh, empty spendly.db in a tmp directory."""
-    test_db = tmp_path / "spendly_test.db"
-    monkeypatch.setattr(db_module, "DB_PATH", test_db)
+def _isolate_db():
+    """Each test gets a fresh, empty set of tables.
+
+    Postgres has no per-test throwaway file like SQLite did, so instead
+    we truncate the tables (and reset identity sequences) before each
+    test against whatever DATABASE_URL points at.
+    """
     db_module.init_db()
+    with db_module.get_db() as conn:
+        conn.execute("TRUNCATE TABLE expenses, users RESTART IDENTITY CASCADE")
     yield
-    # tmp_path is cleaned automatically by pytest.
 
 
 @pytest.fixture(autouse=True)

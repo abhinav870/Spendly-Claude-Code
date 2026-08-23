@@ -11,7 +11,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 expense-tracker/
 ├── app.py              # All routes — single file, no blueprints
 ├── database/
-│   └── db.py           # SQLite helpers: get_db(), init_db(), seed_db()
+│   └── db.py           # Postgres helpers: get_db(), init_db(), seed_db()
 ├── templates/
 │   ├── base.html       # Shared layout — all templates must extend this
 │   └── *.html          # One template per page
@@ -21,6 +21,9 @@ expense-tracker/
 │   │   └── landing.css     # Landing-page-only styles
 │   └── js/
 │       └── main.js         # Vanilla JS only
+├── docker/
+│   ├── Dockerfile          # App image — also used for Render's Docker deploy
+│   └── docker-compose.yml  # Local dev: app + Postgres (context: repo root)
 └── requirements.txt
 
 **Where things belong:**
@@ -34,13 +37,13 @@ expense-tracker/
  - Python: PEP 8, snake_case for all variables and functions
  - Templates: Jinja2 with url_for() for every internal link — never hardcode URLs
  - Route functions: one responsibility only — fetch data, render template, done
- - DB queries: always use parameterized queries (? placeholders) — never f-strings in SQL
+ - DB queries: always use parameterized queries (%s placeholders) — never f-strings in SQL
  - Error handling: use abort() for HTTP errors, not bare return "error string"
 
 ## Tech constraints
 
  - Flask only — no FastAPI, no Django, no other web frameworks
- - SQLite only — no PostgreSQL, no SQLAlchemy ORM, no external DB
+ - PostgreSQL only — migrated from SQLite so data survives Render spin-downs; no SQLAlchemy ORM, connect via psycopg (psycopg[binary] in requirements.txt)
  - Vanilla JS only — no React, no jQuery, no npm packages
  - No new pip packages — work within requirements.txt as-is unless explicitly told otherwise
  - Python 3.10+ assumed — f-strings and match statements are fine
@@ -63,8 +66,14 @@ MacOS: source venv/bin/activate
 Windows: venv\Scripts\activate
 pip install -r requirements.txt
 
-# Run dev server (port 5001)
+# Run dev server (port 5001) — requires a reachable Postgres (see Docker below)
 python app.py
+
+# Run app + Postgres locally via Docker (recommended)
+docker compose -f docker/docker-compose.yml up -d --build
+# App: http://localhost:5001 — Postgres: localhost:5432 (postgres/postgres/spendly)
+docker compose -f docker/docker-compose.yml down          # stop, keep data
+docker compose -f docker/docker-compose.yml down -v       # stop, wipe data
 
 # Run all tests
 pytest
@@ -104,5 +113,6 @@ Do not implement a stub route unless the active task explicitly targets that ste
  - Never install new packages mid-feature without flagging it — keep requirements.txt in sync
  - Never use JS frameworks — the frontend is intentionally vanilla
  - database/db.py is currently empty — do not assume helpers exist until the step that implements them
- - FK enforcement is manual — SQLite foreign keys are off by default; get_db() must run PRAGMA foreign_keys = ON on every connection
+ - FK enforcement is automatic in Postgres — no per-connection PRAGMA needed (unlike the old SQLite setup)
  - The app runs on port 5001, not the Flask default 5000 — don't change this
+ - Connect via DATABASE_URL env var (Render's Postgres convention); get_db() falls back to a local dev connection string if unset

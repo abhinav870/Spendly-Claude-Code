@@ -9,3 +9,4 @@ __pycache__/
 Theory/
 seed_user.py
 .pytest_cache/
+spendly.db

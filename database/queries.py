@@ -1,5 +1,3 @@
-from datetime import date, datetime
-
 from database.db import get_db
 
 
@@ -7,14 +5,14 @@ def get_user_by_id(user_id):
     """Return a template-shaped dict for the profile header, or None."""
     with get_db() as conn:
         row = conn.execute(
-            "SELECT name, email, created_at FROM users WHERE id = ?",
+            "SELECT name, email, created_at FROM users WHERE id = %s",
             (user_id,),
         ).fetchone()
 
     if row is None:
         return None
 
-    created_at = datetime.strptime(row["created_at"], "%Y-%m-%d %H:%M:%S")
+    created_at = row["created_at"]
     member_since = created_at.strftime("%B %Y")  # e.g. "January 2026"
 
     return {
@@ -33,10 +31,10 @@ def get_summary_stats(user_id, category=None, date_from=None, date_to=None):
             SELECT COALESCE(SUM(amount), 0) AS total_spent,
                    COUNT(*)                 AS transaction_count
             FROM expenses
-            WHERE user_id = ?
-              AND (? IS NULL OR category = ?)
-              AND (? IS NULL OR date >= ?)
-              AND (? IS NULL OR date <= ?)
+            WHERE user_id = %s
+              AND (%s::text IS NULL OR category = %s::text)
+              AND (%s::text IS NULL OR date >= %s::text)
+              AND (%s::text IS NULL OR date <= %s::text)
             """,
             (user_id, category, category, date_from, date_from, date_to, date_to),
         ).fetchone()
@@ -45,10 +43,10 @@ def get_summary_stats(user_id, category=None, date_from=None, date_to=None):
             """
             SELECT category, SUM(amount) AS cat_total
             FROM expenses
-            WHERE user_id = ?
-              AND (? IS NULL OR category = ?)
-              AND (? IS NULL OR date >= ?)
-              AND (? IS NULL OR date <= ?)
+            WHERE user_id = %s
+              AND (%s::text IS NULL OR category = %s::text)
+              AND (%s::text IS NULL OR date >= %s::text)
+              AND (%s::text IS NULL OR date <= %s::text)
             GROUP BY category
             ORDER BY cat_total DESC
             LIMIT 1
@@ -72,18 +70,17 @@ def get_recent_transactions(
     """Return up to `limit` most recent expenses, newest-first, optionally
     restricted to a category and/or a date range (inclusive). `limit=None`
     returns every matching expense."""
-    sql_limit = -1 if limit is None else limit
     with get_db() as conn:
         rows = conn.execute(
             """
             SELECT id, date, description, category, amount
             FROM expenses
-            WHERE user_id = ?
-              AND (? IS NULL OR category = ?)
-              AND (? IS NULL OR date >= ?)
-              AND (? IS NULL OR date <= ?)
+            WHERE user_id = %s
+              AND (%s::text IS NULL OR category = %s::text)
+              AND (%s::text IS NULL OR date >= %s::text)
+              AND (%s::text IS NULL OR date <= %s::text)
             ORDER BY date DESC, id DESC
-            LIMIT ?
+            LIMIT %s::bigint
             """,
             (
                 user_id,
@@ -93,7 +90,7 @@ def get_recent_transactions(
                 date_from,
                 date_to,
                 date_to,
-                sql_limit,
+                limit,
             ),
         ).fetchall()
 
@@ -118,10 +115,10 @@ def get_category_breakdown(user_id, category=None, date_from=None, date_to=None)
             """
             SELECT category, SUM(amount) AS amount
             FROM expenses
-            WHERE user_id = ?
-              AND (? IS NULL OR category = ?)
-              AND (? IS NULL OR date >= ?)
-              AND (? IS NULL OR date <= ?)
+            WHERE user_id = %s
+              AND (%s::text IS NULL OR category = %s::text)
+              AND (%s::text IS NULL OR date >= %s::text)
+              AND (%s::text IS NULL OR date <= %s::text)
             GROUP BY category
             ORDER BY amount DESC
             """,
@@ -153,11 +150,12 @@ def create_expense(user_id, amount, category, expense_date, description=None):
         cur = conn.execute(
             """
             INSERT INTO expenses (user_id, amount, category, date, description)
-            VALUES (?, ?, ?, ?, ?)
+            VALUES (%s, %s, %s, %s, %s)
+            RETURNING id
             """,
             (user_id, amount, category, expense_date, description),
         )
-        return cur.lastrowid
+        return cur.fetchone()["id"]
 
 
 def get_expense_by_id(expense_id, user_id):
@@ -167,7 +165,7 @@ def get_expense_by_id(expense_id, user_id):
             """
             SELECT id, amount, category, date, description
             FROM expenses
-            WHERE id = ? AND user_id = ?
+            WHERE id = %s AND user_id = %s
             """,
             (expense_id, user_id),
         ).fetchone()
@@ -192,8 +190,8 @@ def update_expense(
         cur = conn.execute(
             """
             UPDATE expenses
-            SET amount = ?, category = ?, date = ?, description = ?
-            WHERE id = ? AND user_id = ?
+            SET amount = %s, category = %s, date = %s, description = %s
+            WHERE id = %s AND user_id = %s
             """,
             (amount, category, expense_date, description, expense_id, user_id),
         )
@@ -204,7 +202,7 @@ def delete_expense(expense_id, user_id):
     """Delete an expense owned by user_id. Ownership is enforced in the WHERE clause."""
     with get_db() as conn:
         cur = conn.execute(
-            "DELETE FROM expenses WHERE id = ? AND user_id = ?",
+            "DELETE FROM expenses WHERE id = %s AND user_id = %s",
             (expense_id, user_id),
         )
         return cur.rowcount > 0

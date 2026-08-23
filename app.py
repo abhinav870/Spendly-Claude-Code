@@ -1,8 +1,9 @@
 import calendar
 import math
 import os
-import sqlite3
 from datetime import date, datetime
+
+import psycopg
 
 from flask import (
     Flask,
@@ -33,6 +34,9 @@ app = Flask(__name__)
 # Sessions are signed with this key. Read from env in production; fall
 # back to a clearly-flagged dev value so the app boots out of the box.
 app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "dev-secret-change-me")
+
+# Runs on import so the schema exists under gunicorn too, not just `python app.py`.
+init_db()
 
 # ------------------------------------------------------------------ #
 # Date filter helpers                                                 #
@@ -105,7 +109,7 @@ def register():
         # let it surface as an IntegrityError we map to a friendly error.
         try:
             user_id = create_user(name, email, password)
-        except sqlite3.IntegrityError:
+        except psycopg.errors.UniqueViolation:
             return (
                 render_template(
                     "register.html", error="That email is already registered."
@@ -447,7 +451,5 @@ def delete_expense(id):
 
 
 if __name__ == "__main__":
-    # with app.app_context():
-    init_db()
     seed_db()
     app.run(debug=True, port=5001)

@@ -4,10 +4,10 @@ import pytest
 
 from database.db import get_db, get_user_by_email
 
-
 # ------------------------------------------------------------------ #
 # GET /register                                                       #
 # ------------------------------------------------------------------ #
+
 
 def test_get_register_renders_form(client):
     """GET /register returns 200 and contains the registration form fields."""
@@ -23,6 +23,7 @@ def test_get_register_renders_form(client):
 # ------------------------------------------------------------------ #
 # POST /register — happy path                                         #
 # ------------------------------------------------------------------ #
+
 
 def test_post_register_creates_user_and_redirects(client):
     """Valid POST inserts a user, sets session, redirects to /profile."""
@@ -54,6 +55,7 @@ def test_post_register_creates_user_and_redirects(client):
 # POST /register — validation errors                                  #
 # ------------------------------------------------------------------ #
 
+
 def test_post_register_duplicate_email_shows_error(client):
     """A second registration with the same email re-renders with an error."""
     client.post(
@@ -72,9 +74,10 @@ def test_post_register_duplicate_email_shows_error(client):
     assert "already" in resp.get_data(as_text=True).lower()
 
     # Only one row exists.
-    n = get_db().execute(
-        "SELECT COUNT(*) AS n FROM users WHERE email = ?", ("bob@x.com",)
-    ).fetchone()["n"]
+    with get_db() as db:
+        n = db.execute(
+            "SELECT COUNT(*) AS n FROM users WHERE email = %s", ("bob@x.com",)
+        ).fetchone()["n"]
     assert n == 1
 
 
@@ -128,6 +131,7 @@ def test_post_register_invalid_email_format_shows_error(client, bad_email):
 # POST /register — password is hashed, not stored plaintext           #
 # ------------------------------------------------------------------ #
 
+
 def test_post_register_password_is_hashed_not_plaintext(client):
     """The stored password_hash must not equal the submitted password."""
     client.post(
@@ -144,6 +148,7 @@ def test_post_register_password_is_hashed_not_plaintext(client):
 # ------------------------------------------------------------------ #
 # POST /register — missing fields                                     #
 # ------------------------------------------------------------------ #
+
 
 @pytest.mark.parametrize("missing_field", ["name", "email", "password"])
 def test_post_register_missing_field_shows_error(client, missing_field):

@@ -50,7 +50,7 @@ def _insert_expense(user_id, category, tx_date, description, amount):
         db.execute(
             """
             INSERT INTO expenses (user_id, amount, category, date, description)
-            VALUES (?, ?, ?, ?, ?)
+            VALUES (%s, %s, %s, %s, %s)
             """,
             (user_id, amount, category, tx_date, description),
         )

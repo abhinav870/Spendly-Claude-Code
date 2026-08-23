@@ -31,7 +31,7 @@ def _insert_expense(user_id, category, tx_date, description, amount):
         db.execute(
             """
             INSERT INTO expenses (user_id, amount, category, date, description)
-            VALUES (?, ?, ?, ?, ?)
+            VALUES (%s, %s, %s, %s, %s)
             """,
             (user_id, amount, category, tx_date, description),
         )
@@ -149,12 +149,9 @@ def test_get_profile_unauthenticated_redirects_to_login(client):
     assert resp.headers["Location"].endswith("/login")
 
 
-def test_get_profile_seeded_demo_user_shows_real_data(monkeypatch, tmp_path):
+def test_get_profile_seeded_demo_user_shows_real_data(client):
     """Uses seed_db() (demo user + SAMPLE_EXPENSES) with a fresh DB, following
     the test_demo_user_can_login pattern from tests/test_login.py."""
-    test_db = tmp_path / "demo_profile.db"
-    monkeypatch.setattr(db_module, "DB_PATH", test_db)
-    db_module.init_db()
     db_module.seed_db()
 
     from app import app as flask_app
@@ -195,10 +192,7 @@ def test_get_profile_seeded_demo_user_shows_real_data(monkeypatch, tmp_path):
     assert len(category_totals) == 7
 
 
-def test_get_profile_transactions_render_newest_first(monkeypatch, tmp_path):
-    test_db = tmp_path / "demo_profile_order.db"
-    monkeypatch.setattr(db_module, "DB_PATH", test_db)
-    db_module.init_db()
+def test_get_profile_transactions_render_newest_first(client):
     db_module.seed_db()
 
     from app import app as flask_app
