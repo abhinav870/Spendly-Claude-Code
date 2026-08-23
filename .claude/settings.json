@@ -1,13 +1,23 @@
 {
   "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python -c \"\nimport sys, json, subprocess\ndata = json.load(sys.stdin)\nfile = data.get('tool_input', {}).get('file_path', '')\nif file.endswith('.py'):\n    subprocess.run([r'venv\\Scripts\\python.exe', '-m', 'black', '--quiet', file])\n\""
+          }
+        ]
+      }
+    ],
     "PreToolUse": [
       {
         "matcher": "Bash",
         "hooks": [
           {
             "type": "command",
-            "shell": "powershell",
-            "command": "$data = [Console]::In.ReadToEnd() | ConvertFrom-Json; $command = $data.tool_input.command; if ($command -match 'rm.*spendly\\.db') { Write-Output '{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":\"BLOCKED: You cannot delete the database file!\"}}' }"
+            "command": "python -c \"\nimport sys, json\ndata = json.load(sys.stdin)\ncmd = data.get('tool_input', {}).get('command', '')\nprotected = ['spendly.db', '.env', 'migrations/']\ndangerous = ['rm ', 'rm -', 'unlink ', 'truncate ']\nfor d in dangerous:\n    if d in cmd:\n        for p in protected:\n            if p in cmd:\n                print(f'BLOCKED: Cannot run destructive command on protected file: {p}', file=__import__(\\\"sys\\\").stderr)\n                raise SystemExit(2)\n\""
           }
         ]
       }
