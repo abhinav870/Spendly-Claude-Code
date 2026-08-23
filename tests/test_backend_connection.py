@@ -37,6 +37,14 @@ def _insert_expense(user_id, category, tx_date, description, amount):
         )
 
 
+def _data_section(body):
+    """Slice out the transactions table + category breakdown, excluding the
+    always-rendered category filter <select> which lists every category
+    regardless of which user's data is shown."""
+    start = body.index('id="transactions"')
+    return body[start:]
+
+
 # ------------------------------------------------------------------ #
 # Unit tests — get_user_by_id                                        #
 # ------------------------------------------------------------------ #
@@ -258,8 +266,11 @@ def test_profile_isolates_expenses_between_users(client):
     assert "Alice Electricity" in body_a
     assert "Bob Pharmacy" not in body_a
     assert "Bob Movie" not in body_a
-    assert "Health" not in body_a
-    assert "Entertainment" not in body_a
+    # Scope to the transactions/breakdown section — the category filter
+    # <select> always lists every category regardless of whose data is shown.
+    section_a = _data_section(body_a)
+    assert "Health" not in section_a
+    assert "Entertainment" not in section_a
 
     # Alice's total must only reflect her own expenses (333), not the
     # combined total of both users (1110).
@@ -275,8 +286,9 @@ def test_profile_isolates_expenses_between_users(client):
     assert "Bob Movie" in body_b
     assert "Alice Groceries" not in body_b
     assert "Alice Electricity" not in body_b
-    assert "Food" not in body_b
-    assert "Bills" not in body_b
+    section_b = _data_section(body_b)
+    assert "Food" not in section_b
+    assert "Bills" not in section_b
 
     assert "777.00" in body_b  # 333 + 444
 

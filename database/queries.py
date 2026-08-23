@@ -198,3 +198,13 @@ def update_expense(
             (amount, category, expense_date, description, expense_id, user_id),
         )
         return cur.rowcount > 0
+
+
+def delete_expense(expense_id, user_id):
+    """Delete an expense owned by user_id. Ownership is enforced in the WHERE clause."""
+    with get_db() as conn:
+        cur = conn.execute(
+            "DELETE FROM expenses WHERE id = ? AND user_id = ?",
+            (expense_id, user_id),
+        )
+        return cur.rowcount > 0
