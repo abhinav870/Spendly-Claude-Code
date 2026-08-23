@@ -28,10 +28,10 @@ if str(PROJECT_ROOT) not in sys.path:
 import database.db as db_module  # noqa: E402
 from database.db import get_user_by_email  # noqa: E402
 
-
 # ------------------------------------------------------------------ #
 # Helpers                                                             #
 # ------------------------------------------------------------------ #
+
 
 def _seed_user(client, name="Alice", email="alice@example.com", password="supersecret"):
     """Insert a user row via /register and return the DB row."""
@@ -60,9 +60,18 @@ def _login(client, email, password):
     return client.post("/login", data={"email": email, "password": password})
 
 
+def _data_section(body):
+    """Slice out the transactions table + category breakdown, excluding the
+    always-rendered category filter <select> which lists every category
+    regardless of the active filter."""
+    start = body.index('id="transactions"')
+    return body[start:]
+
+
 # ------------------------------------------------------------------ #
 # Auth guard — unchanged behaviour with filter params present         #
 # ------------------------------------------------------------------ #
+
 
 def test_profile_with_date_params_still_requires_login(client):
     """Spec: no new routes — /profile with date_from/date_to must still
@@ -78,6 +87,7 @@ def test_profile_with_date_params_still_requires_login(client):
 # ------------------------------------------------------------------ #
 # No params -> unfiltered ("Step 5 behaviour")                        #
 # ------------------------------------------------------------------ #
+
 
 def test_no_date_params_shows_all_expenses_unfiltered(client):
     """DoD: visiting /profile with no query params returns the same data
@@ -100,6 +110,7 @@ def test_no_date_params_shows_all_expenses_unfiltered(client):
 # Custom valid range filters all three sections                       #
 # ------------------------------------------------------------------ #
 
+
 def test_custom_valid_range_filters_all_three_sections(client):
     """DoD: submitting a valid date_from/date_to shows only expenses within
     that range in summary stats, transactions, and category breakdown."""
@@ -120,10 +131,13 @@ def test_custom_valid_range_filters_all_three_sections(client):
 
     # Summary total should reflect only the in-range expense.
     assert "250.00" in body
-    # Category breakdown should only include the in-range category.
-    assert "Bills" in body
-    assert "Health" not in body
-    assert "Food" not in body
+    # Category breakdown should only include the in-range category. Scope to
+    # the transactions/breakdown section — the category filter <select>
+    # always lists every category regardless of the active filter.
+    section = _data_section(body)
+    assert "Bills" in section
+    assert "Health" not in section
+    assert "Food" not in section
 
 
 def test_date_range_bounds_are_inclusive(client):
@@ -137,7 +151,9 @@ def test_date_range_bounds_are_inclusive(client):
     _insert_expense(user["id"], "Food", "2026-07-31", "Just before start", 333)
     _insert_expense(user["id"], "Food", "2026-09-01", "Just after end", 444)
 
-    body = client.get("/profile?date_from=2026-08-01&date_to=2026-08-31").get_data(as_text=True)
+    body = client.get("/profile?date_from=2026-08-01&date_to=2026-08-31").get_data(
+        as_text=True
+    )
 
     assert "On start boundary" in body
     assert "On end boundary" in body
@@ -148,6 +164,7 @@ def test_date_range_bounds_are_inclusive(client):
 # ------------------------------------------------------------------ #
 # Zero-result range -> zero state, no errors                          #
 # ------------------------------------------------------------------ #
+
 
 def test_range_with_no_matching_expenses_shows_zero_state(client):
     """DoD: a user with no expenses in the selected range sees ₹0.00 total
@@ -168,6 +185,7 @@ def test_range_with_no_matching_expenses_shows_zero_state(client):
 # ------------------------------------------------------------------ #
 # Invalid range: date_from > date_to                                  #
 # ------------------------------------------------------------------ #
+
 
 def test_date_from_after_date_to_falls_back_to_unfiltered_with_flash(client):
     """DoD + Rules: if date_from > date_to, treat both as absent (no filter)
@@ -196,6 +214,7 @@ def test_date_from_after_date_to_falls_back_to_unfiltered_with_flash(client):
 # ------------------------------------------------------------------ #
 # Malformed date strings                                              #
 # ------------------------------------------------------------------ #
+
 
 def test_malformed_date_from_does_not_crash_and_falls_back_unfiltered(client):
     """DoD: a malformed date string (e.g. date_from=not-a-date) does not
@@ -263,6 +282,7 @@ def test_empty_string_date_params_treated_as_absent(client):
 # Only one of the two params provided                                 #
 # ------------------------------------------------------------------ #
 
+
 def test_only_date_from_provided_does_not_crash(client):
     """Spec doesn't define single-sided filtering explicitly, but per the
     'no crash' guarantee and the fallback rule (both params absent/invalid
@@ -290,6 +310,7 @@ def test_only_date_to_provided_does_not_crash(client):
 # ------------------------------------------------------------------ #
 # Preset: This Month                                                  #
 # ------------------------------------------------------------------ #
+
 
 def test_this_month_preset_filters_to_current_calendar_month(client):
     """DoD: clicking 'This Month' filters all three sections to the current
@@ -322,6 +343,7 @@ def test_this_month_preset_filters_to_current_calendar_month(client):
 # Preset: All Time — clean URL, no filter params                      #
 # ------------------------------------------------------------------ #
 
+
 def test_all_time_preset_url_has_no_query_params_and_shows_everything(client):
     """DoD + Rules: the 'All Time' preset must pass no query params (clean
     /profile URL) and must remove any active filter, showing all expenses."""
@@ -344,6 +366,7 @@ def test_all_time_preset_url_has_no_query_params_and_shows_everything(client):
 # ₹ symbol always present, regardless of filter / zero state          #
 # ------------------------------------------------------------------ #
 
+
 def test_rupee_symbol_present_with_active_filter(client):
     """DoD: all amounts continue to display the ₹ symbol regardless of the
     active filter."""
@@ -352,7 +375,9 @@ def test_rupee_symbol_present_with_active_filter(client):
 
     _insert_expense(user["id"], "Food", "2026-08-10", "Groceries", 250)
 
-    body = client.get("/profile?date_from=2026-08-01&date_to=2026-08-31").get_data(as_text=True)
+    body = client.get("/profile?date_from=2026-08-01&date_to=2026-08-31").get_data(
+        as_text=True
+    )
     assert "₹" in body
 
 
@@ -364,13 +389,16 @@ def test_rupee_symbol_present_on_zero_state_with_filter(client):
 
     _insert_expense(user["id"], "Food", "2026-01-01", "Not in range", 100)
 
-    body = client.get("/profile?date_from=2027-01-01&date_to=2027-01-31").get_data(as_text=True)
+    body = client.get("/profile?date_from=2027-01-01&date_to=2027-01-31").get_data(
+        as_text=True
+    )
     assert "₹0.00" in body
 
 
 # ------------------------------------------------------------------ #
 # Category breakdown & summary stats respect the filter (DB-level)    #
 # ------------------------------------------------------------------ #
+
 
 def test_category_breakdown_excludes_categories_outside_range(client):
     """DoD: the category breakdown section respects the active date filter
@@ -381,10 +409,15 @@ def test_category_breakdown_excludes_categories_outside_range(client):
     _insert_expense(user["id"], "Food", "2026-08-10", "In range", 300)
     _insert_expense(user["id"], "Shopping", "2025-01-01", "Out of range", 900)
 
-    body = client.get("/profile?date_from=2026-08-01&date_to=2026-08-31").get_data(as_text=True)
+    body = client.get("/profile?date_from=2026-08-01&date_to=2026-08-31").get_data(
+        as_text=True
+    )
 
-    assert "Food" in body
-    assert "Shopping" not in body
+    # Scope to the transactions/breakdown section — the category filter
+    # <select> always lists every category regardless of the active filter.
+    section = _data_section(body)
+    assert "Food" in section
+    assert "Shopping" not in section
 
 
 def test_summary_stats_transaction_count_reflects_filtered_range(client):
@@ -397,7 +430,9 @@ def test_summary_stats_transaction_count_reflects_filtered_range(client):
     _insert_expense(user["id"], "Food", "2026-08-15", "In range 2", 75)
     _insert_expense(user["id"], "Food", "2026-01-01", "Out of range", 1000)
 
-    body = client.get("/profile?date_from=2026-08-01&date_to=2026-08-31").get_data(as_text=True)
+    body = client.get("/profile?date_from=2026-08-01&date_to=2026-08-31").get_data(
+        as_text=True
+    )
 
     # Two matching transactions -> total of 125, not 1125.
     assert "125.00" in body
@@ -408,17 +443,24 @@ def test_summary_stats_transaction_count_reflects_filtered_range(client):
 # Two-user isolation still holds with an active filter                #
 # ------------------------------------------------------------------ #
 
+
 def test_date_filter_still_isolates_expenses_between_users(client):
     """The date filter must never leak another user's expenses even when
     both users have expenses inside the same date range."""
-    user_a = _seed_user(client, name="Alice", email="alice@example.com", password="supersecret")
-    user_b = _seed_user(client, name="Bob", email="bob@example.com", password="supersecret")
+    user_a = _seed_user(
+        client, name="Alice", email="alice@example.com", password="supersecret"
+    )
+    user_b = _seed_user(
+        client, name="Bob", email="bob@example.com", password="supersecret"
+    )
 
     _insert_expense(user_a["id"], "Food", "2026-08-05", "Alice groceries", 111)
     _insert_expense(user_b["id"], "Health", "2026-08-05", "Bob pharmacy", 222)
 
     _login(client, "alice@example.com", "supersecret")
-    body = client.get("/profile?date_from=2026-08-01&date_to=2026-08-31").get_data(as_text=True)
+    body = client.get("/profile?date_from=2026-08-01&date_to=2026-08-31").get_data(
+        as_text=True
+    )
 
     assert "Alice groceries" in body
     assert "Bob pharmacy" not in body
@@ -427,6 +469,7 @@ def test_date_filter_still_isolates_expenses_between_users(client):
 # ------------------------------------------------------------------ #
 # Malformed date must not surface a raw 500 / traceback text          #
 # ------------------------------------------------------------------ #
+
 
 def test_malformed_date_does_not_leak_traceback(client):
     """Extra safety net for the 'does not crash' DoD item — the response
